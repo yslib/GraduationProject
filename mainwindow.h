@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QAbstractTableModel>
 
 
 namespace QtCharts{
@@ -9,6 +10,7 @@ namespace QtCharts{
 class QChart;
 class QLineSeries;
 class QChartView;
+class QVXYModelMapper;
 }
 
 class QWidget;
@@ -29,12 +31,16 @@ class QLabel;
 class QAction;
 class QAbstractTableModel;
 class QModelIndex;
+class QTableView;
+//class QHash;
+class QRect;
+class QProgressBar;
+
 
 template<typename T>
 class QVector;
 
-typedef QVector<QPointF> DataList2d;
-typedef QVector<qreal> DataList;
+typedef QVector<QVector<qreal> > DataTable;
 
 
 
@@ -42,16 +48,24 @@ class DataTableModel:public QAbstractTableModel
 {
     Q_OBJECT
 public:
-    DataTableModel(QObject * parent);
-    int rowCount(const QModelIndex &parent = QModelIndex())const;
-    int columCount(const QModelIndex &parent = QModelIndex())const;
-    QVariant data(const QModelIndex &index,int role = Qt::DisplayRole)const;
+    DataTableModel(QObject * parent = 0);
+    DataTableModel(const DataTable & dataTable,QObject *parent = 0);
+    int rowCount(const QModelIndex &parent = QModelIndex())const;           //must be overrided
+    int columnCount(const QModelIndex &parent = QModelIndex())const;         //must be overrided
+    QVariant data(const QModelIndex &index,int role = Qt::DisplayRole)const;        //must be overrided
     QVariant headerData(int section,Qt::Orientation orientation,int role)const;
+
+    void SetData(const DataTable & dataTable);
+    void AddData(const DataTable & dataTable, const QString &color);
+    int rows()const;
+    int columns()const;
+
+    ~DataTableModel();
 private:
-    DataList2d m_Data2d;
+    DataTable m_Data;
+    QHash<QString,QRect> m_Mapping;
 
 };
-
 
 class MainWindow : public QMainWindow
 {
@@ -94,7 +108,8 @@ private:
     QLineEdit * txtDataSourcePath;
     QPushButton * btnDataSourcePath;
     QPushButton * btnDataCapture;
-    QWidget *wgtDataDetails;
+    QTableView *tblView;
+
 
     //Decompose Tab
     QWidget * wgtDecompose;
@@ -102,6 +117,7 @@ private:
     QLabel * lblDecompose;
     QComboBox * cmbDecompose;
     QPushButton * btnDecompose;
+    QProgressBar * decomposeProgressBar;
 
     //Analyse Tab
     QTabWidget * tWgtAnalyse;
@@ -124,6 +140,8 @@ private:
     QWidget * wgtSettings;
 
     QVector<QtCharts::QLineSeries *> series;
+    DataTableModel * dataTableModel;
+    QVector<QtCharts::QVXYModelMapper *> modelMappers;
     QVector<QtCharts::QChart* > charts;
     QVector<QtCharts::QChartView* > chartViews;
 
@@ -132,15 +150,17 @@ private:
     void CreateChartArea();
     void CreateControlPlaneTableWidget();
     void CreateMainLayout();
+    void CreateDataModel();
 
-    void InsertChartIntoChartArea(QtCharts::QChartView * chartView);
+    void InsertChartIntoChartArea(const DataTable & dataTable, const QString &chartName = QString(), const QString &color=QString(),bool gl = false);
 
-    QtCharts::QLineSeries * CreateLineSeries(const DataList & dataList,qreal delta)const;
+    QtCharts::QLineSeries * CreateLineSeries(const DataTable &dataTable)const;
     QtCharts::QChart * CreateLineChart(QtCharts::QLineSeries * series)const;
-    void ReadData(const QString &path, DataList & dataList);
-    void ReadData(const QString &path, DataList2d & dataLists);
+    void ReadData(const QString &path, DataTable & dataTable,qreal delta);
 private slots:
     void DataSourceChanged(int index);
+    void DataSourceFromFileOpened();
+    void Decomposed();
 };
 
 #endif // MAINWINDOW_H

@@ -1,8 +1,10 @@
 
 
 #include <QtWidgets>
+#include <QTableView>
 #include <QtCharts/QtCharts>
 #include <QVector>
+#include <QFileDialog>
 
 #include "mainwindow.h"
 
@@ -15,7 +17,9 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     CreateChartArea();
     CreateControlPlaneTableWidget();
+    CreateDataModel();
     CreateMainLayout();
+
     setWindowTitle(tr("传感器故障检测"));
 }
 
@@ -26,35 +30,8 @@ void MainWindow::CreateChartArea()
 
     QWidget *chartsWidget = new QWidget;
 
-    QChart * newChart = nullptr;
-    QChartView * newChartView = nullptr;
 
-    DataList dataList;
-    ReadData("/Users/Ysl/gyrx.txt",dataList);
 
-    for(int i=0;i<ChartViewNums::chartViewNums;i++){
-        series.push_back(CreateLineSeries(dataList,0.025));
-    }
-    for(int i=0;i<ChartViewNums::chartViewNums;i++){
-
-        newChart = new QChart();
-        newChart->legend()->hide();
-        newChart->addSeries(series[i]);
-        newChart->createDefaultAxes();
-        newChart->setTitle(tr("传感器信号"));
-
-        newChartView = new QChartView();
-        newChartView->setChart(newChart);
-        newChartView->setRenderHint(QPainter::Antialiasing);
-
-        newChartView->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
-        newChartView->setMinimumHeight(50);
-
-        chartLayout->addWidget(newChartView);
-
-        charts.push_back(newChart);
-        chartViews.push_back(newChartView);
-    }
 
       chartsWidget->setLayout(chartLayout);
       chartsWidget->layout()->setContentsMargins(0,0,0,0);
@@ -81,7 +58,6 @@ void MainWindow::CreateControlPlaneTableWidget()
 
 
     //Data Tab--------------------
-    wgtDataDetails = new QWidget;
     wgtDataSource = new QWidget;
     layoutDataSource = new QGridLayout(wgtDataSource);
     lblDataSource = new QLabel(tr("数据源"),controlPlaneTabWidget);
@@ -96,9 +72,13 @@ void MainWindow::CreateControlPlaneTableWidget()
     txtDataSourcePath = new QLineEdit();
     txtDataSourcePath->setReadOnly(true);
     btnDataSourcePath = new QPushButton(tr("打开"));
-
+    connect(btnDataSourcePath,SIGNAL(clicked()),this,SLOT(DataSourceFromFileOpened()));
     layoutDataSource->addWidget(lblDataSource,0,0);
     layoutDataSource->addWidget(cmbDataSource,0,1);
+    tblView = new QTableView;
+    tblView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tblView->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    layoutDataSource->addWidget(tblView,2,0,2,3);
 
     //
 
@@ -120,9 +100,16 @@ void MainWindow::CreateControlPlaneTableWidget()
     cmbDecompose->addItem(tr("EMD"),Decompose::EMD);
 
     btnDecompose = new QPushButton(tr("分解"));
+    connect(btnDecompose,SIGNAL(clicked()),this,SLOT(Decomposed()));
+    decomposeProgressBar = new QProgressBar(this);
+
     layoutDecompose->addWidget(lblDecompose,0,0);
     layoutDecompose->addWidget(cmbDecompose,0,1);
     layoutDecompose->addWidget(btnDecompose,0,2);
+    layoutDecompose->addWidget(decomposeProgressBar,1,0,1,3);
+    layoutDecompose->setRowStretch(0,10);
+    layoutDecompose->setRowStretch(1,10);
+    layoutDecompose->setRowStretch(2,50);
     wgtDecompose->setLayout(layoutDecompose);
 
     controlPlaneTabWidget->addTab(wgtDecompose,tr("分解"));
@@ -190,13 +177,58 @@ void MainWindow::CreateMainLayout()
     setCentralWidget(centralWidget);
 }
 
-QLineSeries *MainWindow::CreateLineSeries(const DataList &dataList, qreal delta) const
+void MainWindow::CreateDataModel()
+{
+    dataTableModel = new DataTableModel(this);
+
+
+}
+
+void MainWindow::InsertChartIntoChartArea(const DataTable &dataTable,const QString & chartName,const QString & color,bool gl)
+{
+
+    dataTableModel->AddData(dataTable,color);
+    //qDebug()<<dataTableModel->rows()<<" "<<dataTableModel->columns();
+    QtCharts::QVXYModelMapper *modelMapper = new QVXYModelMapper(this);
+    QLineSeries * newSeries = new QLineSeries(this);
+    newSeries->setPen(QPen(QColor(color)));
+    newSeries->setUseOpenGL(gl);
+    modelMapper->setXColumn(dataTableModel->columns()-2);
+    modelMapper->setYColumn(dataTableModel->columns()-1);
+    modelMapper->setSeries(newSeries);
+    modelMapper->setModel(dataTableModel);
+
+    QChart * newChart = new QChart();
+    newChart->setAnimationOptions(QChart::AllAnimations);
+    newChart->legend()->hide();
+    newChart->createDefaultAxes();
+    newChart->setTitle(chartName);
+    newChart->addSeries(newSeries);
+
+    QChartView * newChartView = new QChartView(this);
+    newChartView->setChart(newChart);
+    newChartView->setRenderHint(QPainter::Antialiasing);
+
+    newChartView->setSizePolicy(QSizePolicy::Expanding,QSizePolicy::Fixed);
+    newChartView->setMinimumHeight(50);
+
+    chartLayout->addWidget(newChartView);
+    series.push_back(newSeries);
+    charts.push_back(newChart);
+    chartViews.push_back(newChartView);
+    modelMappers.push_back(modelMapper);
+
+    tblView->setModel(dataTableModel);
+    tblView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    tblView->verticalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+}
+
+QLineSeries *MainWindow::CreateLineSeries(const DataTable &dataTable) const
 {
     QLineSeries * newSeries =new QLineSeries;
-    qreal x = 0.0;
-    foreach (qreal y, dataList) {
-        newSeries->append(x,y);
-        x+=delta;
+    for(int i=0;i<dataTable[0].size();i++){
+        newSeries->append(dataTable[0][i],dataTable[1][i]);
     }
     return newSeries;
 }
@@ -210,19 +242,23 @@ QChart *MainWindow::CreateLineChart(QLineSeries * series) const
 
 }
 
-void MainWindow::ReadData(const QString &path, DataList &dataList)
+void MainWindow::ReadData(const QString &path, DataTable &dataTable, qreal delta)
 {
-    dataList.clear();
+    for(int i=0;i<dataTable.size();i++){
+        dataTable[i].clear();
+    }
     QFile file(path);
-
+    dataTable.resize(2);
     if(file.open(QIODevice::ReadOnly) == true)
     {
         QTextStream ss(&file);
-        qreal y;
+        qreal y,x=0.0;
         while(ss.atEnd() == false)
         {
             ss>>y;
-            dataList<<y;
+            dataTable[0]<<x;
+            dataTable[1]<<y;
+            x+=delta;
         }
         file.close();
     }else{
@@ -231,25 +267,6 @@ void MainWindow::ReadData(const QString &path, DataList &dataList)
 
 }
 
-void MainWindow::ReadData(const QString &path, DataList2d &dataList)
-{
-    dataList.clear();
-    QFile file(path);
-
-    if(file.open(QIODevice::ReadOnly) == true)
-    {
-        QTextStream ss(&file);
-        qreal x ,y;
-        while(ss.atEnd() == false)
-        {
-            ss>>x>>y;
-            dataList<<QPointF(x,y);
-        }
-        file.close();
-    }else{
-        //do nothing
-    }
-}
 
 void MainWindow::DataSourceChanged(int index)
 {
@@ -270,7 +287,125 @@ void MainWindow::DataSourceChanged(int index)
     }
 }
 
+void MainWindow::DataSourceFromFileOpened()
+{
+    QString dirPath = QFileDialog::getOpenFileName(this,                   //父类
+                                                tr("文件目录"),         //标题
+                                                "/");                   //目录
+    if(dirPath.isEmpty() == false){
+        txtDataSourcePath->setText(dirPath);
+        //打开文件并且显示
+        DataTable dataTable;
+        ReadData(dirPath,dataTable,0.025);
+        InsertChartIntoChartArea(dataTable,tr("传感器信号"),QString("#99cc66"));
+        InsertChartIntoChartArea(dataTable,tr("传感器信号"),QString("#996600"));
+        InsertChartIntoChartArea(dataTable,tr("传感器信号"),QString("#cc0033"));
+    }else{
+
+    }
+}
+
+void MainWindow::Decomposed()
+{
+    QVariant item = cmbDecompose->currentData();
+    if(item == Decompose::EMD){
+        qDebug()<<"EMD";
+    }else{
+
+    }
+}
+
 MainWindow::~MainWindow()
+{
+
+}
+
+
+/*DataTableModel Class Definition*/
+DataTableModel::DataTableModel(QObject *parent):QAbstractTableModel(parent)
+{
+
+}
+
+DataTableModel::DataTableModel(const DataTable &dataTable, QObject *parent):QAbstractTableModel(parent)
+{
+    m_Data = dataTable;
+}
+
+int DataTableModel::rowCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent)
+    return rows();
+}
+
+int DataTableModel::columnCount(const QModelIndex &parent) const
+{
+    Q_UNUSED(parent)
+    return columns();
+}
+
+QVariant DataTableModel::data(const QModelIndex &index, int role) const
+{
+    //qDebug()<<"data";
+    switch(role)
+    {
+    case Qt::DisplayRole:
+        return m_Data[index.column()][index.row()];
+        break;
+    case Qt::BackgroundRole:
+        foreach(const QRect & rect,m_Mapping){
+            if(rect.contains(index.column(),index.row())){
+                return QColor(m_Mapping.key(rect));
+            }
+        }
+        break;
+    case Qt::EditRole:
+        break;
+    }
+    return QVariant();
+}
+
+QVariant DataTableModel::headerData(int section, Qt::Orientation orientation, int role) const
+{
+    if (role != Qt::DisplayRole)
+        return QVariant();
+
+    if (orientation == Qt::Horizontal) {
+        if (section % 2 == 0)
+            return "x";
+        else
+            return "y";
+    } else {
+        return QString("%1").arg(section + 1);
+    }
+}
+
+void DataTableModel::SetData(const DataTable &dataTable)
+{
+    m_Data = dataTable;
+}
+
+void DataTableModel::AddData(const DataTable & dataTable,const QString & color)
+{
+
+    foreach (const QVector<qreal> & vec, dataTable) {
+        m_Data.push_back(vec);
+    }
+    m_Mapping.insertMulti(color,QRect(columns()-dataTable.size(),0,dataTable.size(),rows()));
+}
+int DataTableModel::rows() const
+{
+    if(m_Data.empty() == true)
+        return 0;
+    return m_Data[0].size();
+}
+
+int DataTableModel::columns() const
+{
+    return m_Data.size();
+}
+
+DataTableModel::~DataTableModel()
 {
 
 }
