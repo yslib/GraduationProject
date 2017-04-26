@@ -1,4 +1,6 @@
-
+﻿#if _MSC_VER >= 1600
+#pragma execution_character_set("utf-8")
+#endif
 
 #include <QtWidgets>
 #include <QTableView>
@@ -158,7 +160,7 @@ void MainWindow::CreateControlPlaneTableWidget()
 
 
     //Tab Style-------------------
-    controlPlaneTabWidget->setTabShape(QTabWidget::Triangular);
+    //controlPlaneTabWidget->setTabShape(QTabWidget::Triangular);
     controlPlaneTabWidget->setTabPosition(QTabWidget::North);
 }
 
