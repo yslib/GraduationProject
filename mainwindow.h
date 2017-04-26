@@ -1,4 +1,4 @@
-#ifndef MAINWINDOW_H
+﻿#ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
 #include <QMainWindow>
@@ -32,16 +32,13 @@ class QAction;
 class QAbstractTableModel;
 class QModelIndex;
 class QTableView;
-//class QHash;
 class QRect;
 class QProgressBar;
-
-
 template<typename T>
 class QVector;
 
-typedef QVector<QVector<qreal> > DataTable;
 
+typedef QVector<QVector<qreal> > DataTable;
 
 
 class DataTableModel:public QAbstractTableModel
@@ -59,6 +56,8 @@ public:
     void AddData(const DataTable & dataTable, const QString &color);
     int rows()const;
     int columns()const;
+
+    std::vector<float> OriginalSignal();
 
     ~DataTableModel();
 private:
@@ -145,6 +144,8 @@ private:
     QVector<QtCharts::QChart* > charts;
     QVector<QtCharts::QChartView* > chartViews;
 
+    QVector<QString> colorSet;
+
 private:
     void CreateMenu();
     void CreateChartArea();
@@ -157,6 +158,7 @@ private:
     QtCharts::QLineSeries * CreateLineSeries(const DataTable &dataTable)const;
     QtCharts::QChart * CreateLineChart(QtCharts::QLineSeries * series)const;
     void ReadData(const QString &path, DataTable & dataTable,qreal delta);
+
 private slots:
     void DataSourceChanged(int index);
     void DataSourceFromFileOpened();
