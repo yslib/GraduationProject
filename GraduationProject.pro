@@ -26,5 +26,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += main.cpp\
         mainwindow.cpp
 
-HEADERS  += mainwindow.h \
-    emd.h
+HEADERS  += mainwindow.h
+
+CONFIG += c++11
