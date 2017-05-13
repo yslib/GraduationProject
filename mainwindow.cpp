@@ -15,7 +15,7 @@
 #include <QtCharts/QtCharts>
 #include <QVector>
 #include <QFileDialog>
-#include "mainwindow.h"
+
 
 #include <cstdlib>
 #include <vector>
@@ -23,6 +23,8 @@
 #include <cassert>
 #include <cmath>
 #include <unordered_map>
+
+#include "mainwindow.h"
 
 #define ASSERT assert
 

@@ -3,7 +3,11 @@
 
 #include <QMainWindow>
 #include <QAbstractTableModel>
+
+#ifndef _MSC_VER
 #include <unordered_map>
+#include <vector>
+#endif
 
 
 namespace QtCharts{
@@ -39,11 +43,16 @@ template<typename T> class QVector;
 
 typedef QVector<QVector<qreal> > DataTable;
 
+#ifdef _MSC_VER
 namespace std {
-template<typename T1,typename T2,typename T3,typename T4,typename T5> class unordered_map;
+template<typename T> class allocator;
+template<typename T> class hash;
+template<typename T> class equal_to;
 template<typename T1,typename T2> class vector;
 template<typename T1,typename T2> struct pair;
+template<typename T1,typename T2,typename T3,typename T4,typename T5> class unordered_map;
 }
+#endif
 
 //Probabilistic Neural Networks
 class PNN
@@ -53,6 +62,7 @@ public:
     typedef int CLASSIFICATION;
     typedef float PROB;
     typedef std::unordered_map<CLASSIFICATION, PROB> PROB_TABLE;
+    //typedef std::vector<float> wtf;
 
     PNN(const std::string & path = "");
     void add_eigen_vector(CLASSIFICATION classification, const std::vector<float> & vec);
@@ -82,8 +92,6 @@ private:
     std::vector<__cell> __pnn;
     int __max_columns;
     std::unordered_map<CLASSIFICATION,__cell_cls> __classification_mapping;
-
-
 
 };
 
