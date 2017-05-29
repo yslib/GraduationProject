@@ -24,9 +24,20 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 
 SOURCES += main.cpp\
-        mainwindow.cpp
+        mainwindow.cpp \
+    pnn.cpp \
+    arithmetic.cpp \
+    datatablemodel.cpp \
+    featureextract.cpp \
+    emd.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += mainwindow.h \
+    pnn.h \
+    arithmetic.h \
+    datatablemodel.h \
+    featureextract.h \
+    emd.h \
+    config.h
 
 CONFIG += c++11
 
