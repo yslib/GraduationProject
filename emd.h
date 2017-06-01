@@ -1,7 +1,8 @@
-#ifndef EMD_H
+﻿#ifndef EMD_H
 #define EMD_H
 
 #include <vector>
+#include <algorithm>
 
 bool is_imf(const std::vector<double> & vec);
 void emd(std::vector<double> & y, const std::vector<double> & x, std::vector<std::vector<double> > & res);

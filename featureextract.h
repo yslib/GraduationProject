@@ -1,7 +1,8 @@
-#ifndef FEATUREEXTRACT_H
+﻿#ifndef FEATUREEXTRACT_H
 #define FEATUREEXTRACT_H
 
 #include <vector>
+#include <algorithm>
 
 typedef std::vector<std::vector<double> > IMF;
 void make_permutations();
