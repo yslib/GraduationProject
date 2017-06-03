@@ -29,7 +29,8 @@ SOURCES += main.cpp\
     arithmetic.cpp \
     datatablemodel.cpp \
     featureextract.cpp \
-    emd.cpp
+    emd.cpp \
+    treeview.cpp
 
 HEADERS  += mainwindow.h \
     pnn.h \
@@ -37,7 +38,8 @@ HEADERS  += mainwindow.h \
     datatablemodel.h \
     featureextract.h \
     emd.h \
-    config.h
+    config.h \
+    treeview.h
 
 CONFIG += c++11
 

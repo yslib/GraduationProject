@@ -15,6 +15,7 @@
 #include <QtCharts/QtCharts>
 #include <QVector>
 #include <QFileDialog>
+#include <QTreeView>
 
 
 #include <cstdlib>
@@ -47,6 +48,7 @@ MainWindow::MainWindow(QWidget *parent) :
          <<QString("#66CCCC")
         <<QString("#FF6600")
        <<QString("#336699");
+    CreateDataTreeView();
     CreateChartArea();
     CreateControlPlaneTableWidget();
     CreateDataModel();
@@ -234,11 +236,12 @@ void MainWindow::CreateControlPlaneTableWidget()
 void MainWindow::CreateMainLayout()
 {
     mainLayout = new QGridLayout;
-    mainLayout->addWidget(controlPlaneTabWidget,0,1);
-    mainLayout->addWidget(chartScrollArea,0,0);
-
-    mainLayout->setColumnStretch(0,30);
+    mainLayout->addWidget(dataTreeView,0,0);
+    mainLayout->addWidget(controlPlaneTabWidget,0,2);
+    mainLayout->addWidget(chartScrollArea,0,1);
+    mainLayout->setColumnStretch(0,5);
     mainLayout->setColumnStretch(1,20);
+    mainLayout->setColumnStretch(2,10);
     mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
     centralWidget = new QWidget(this);
@@ -414,6 +417,11 @@ void MainWindow::Decomposed()
 MainWindow::~MainWindow()
 {
 
+}
+
+void MainWindow::CreateDataTreeView()
+{
+    dataTreeView = new QTreeView(this);
 }
 
 

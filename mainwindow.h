@@ -41,6 +41,7 @@ class QModelIndex;
 class QTableView;
 class QRect;
 class QProgressBar;
+class QTreeView;
 
 template<typename T> class QVector;
 
@@ -89,8 +90,11 @@ private:
     //Main Layout
     QWidget * centralWidget;
     QGridLayout *mainLayout;
+    QTreeView * dataTreeView;
+
     QScrollArea *chartScrollArea;
     QGridLayout *chartLayout;
+
     QGridLayout *controlPlaneLayout;
     QTabWidget *controlPlaneTabWidget;
 
@@ -157,6 +161,7 @@ private:
     };
 
 private:
+    void CreateDataTreeView();
     void CreateMenu();
     void CreateChartArea();
     void CreateControlPlaneTableWidget();
