@@ -32,6 +32,7 @@
 #include "datatablemodel.h"
 #include "featureextract.h"
 #include "emd.h"
+#include "treeview.h"
 
 #define ASSERT assert
 
@@ -48,6 +49,15 @@ MainWindow::MainWindow(QWidget *parent) :
          <<QString("#66CCCC")
         <<QString("#FF6600")
        <<QString("#336699");
+
+
+
+
+
+//    connect(dataTreeView->selectionModel(), &QItemSelectionModel::selectionChanged,this, &MainWindow::updateActions);
+
+
+
     CreateDataTreeView();
     CreateChartArea();
     CreateControlPlaneTableWidget();
@@ -171,7 +181,7 @@ void MainWindow::CreateControlPlaneTableWidget()
     //QList<QString> names;
     //names<<tr("漂移")<<tr("失效")<<tr("偏置")<<tr("精度下降");
 
-        QtCharts::QPieSlice * slice = new QtCharts::QPieSlice(tr("正常:29.60%"),0.2960);
+        QtCharts::QPieSlice * slice = new QtCharts::QPieSlice(tr("正常:26.67%"),0.2667);
         slice->setLabelVisible();
         slice->setExploded();
         //slice->setLabelArmLengthFactor(4);
@@ -182,21 +192,21 @@ void MainWindow::CreateControlPlaneTableWidget()
         //slice->setBrush();
         pieSeries->append(slice);
 
-        slice = new QtCharts::QPieSlice(tr("漂移:59.53%"),0.5953);
+        slice = new QtCharts::QPieSlice(tr("漂移:57.83%"),0.5783);
         slice->setLabelVisible();
         //slice->setLabelArmLengthFactor(4);
         slices<<slice;
         //slice->setBrush();
         pieSeries->append(slice);
 
-        slice = new QtCharts::QPieSlice(tr("精度下降:0.47%"),0.0047);
+        slice = new QtCharts::QPieSlice(tr("精度下降:5.57%"),0.0557);
         slice->setLabelVisible();
         //slice->setLabelArmLengthFactor(4);
         slices<<slice;
         //slice->setBrush();
         pieSeries->append(slice);
 
-        slice = new QtCharts::QPieSlice(tr("偏置:10.37%"),0.1037);
+        slice = new QtCharts::QPieSlice(tr("偏置:9.33%"),0.0993);
         slice->setLabelVisible();
         //slice->setLabelArmLengthFactor(4);
         slices<<slice;
@@ -239,8 +249,8 @@ void MainWindow::CreateMainLayout()
     mainLayout->addWidget(dataTreeView,0,0);
     mainLayout->addWidget(controlPlaneTabWidget,0,2);
     mainLayout->addWidget(chartScrollArea,0,1);
-    mainLayout->setColumnStretch(0,5);
-    mainLayout->setColumnStretch(1,20);
+    mainLayout->setColumnStretch(0,10);
+    mainLayout->setColumnStretch(1,25);
     mainLayout->setColumnStretch(2,10);
     mainLayout->setSizeConstraint(QLayout::SetMinimumSize);
 
@@ -345,6 +355,33 @@ void MainWindow::SetPieChartValue(int index, qreal val, const QString &label)
     slices.at(index)->setValue(val);
     slices.at(index)->setLabel(label);
 }
+
+void MainWindow::insertChild(AbstractTreeItemType *itemType, QModelIndex parent)
+{
+//    disconnect(dataTreeView->selectionModel(), &QItemSelectionModel::currentChanged,
+//            this, &MainWindow::treeItemSelectedChanged);
+    if (treeModel->columnCount(parent) == 0) {
+        if (!treeModel->insertColumn(0, parent))
+            return;
+    }
+
+    if (!treeModel->insertRow(treeModel->rowCount(parent), parent))
+        return;
+
+    for (int column = 0; column < treeModel->columnCount(parent); ++column) {
+        QModelIndex child = treeModel->index(treeModel->rowCount(parent)-1, column, parent);
+        if(column == 0)treeModel->setData(child, QVariant::fromValue(itemType));
+
+        if (!treeModel->headerData(column, Qt::Horizontal).isValid())
+            treeModel->setHeaderData(column, Qt::Horizontal, QVariant("[No header]"));
+    }
+
+    dataTreeView->selectionModel()->setCurrentIndex(treeModel->index(treeModel->rowCount(parent)-1, 0, parent),
+                                            QItemSelectionModel::ClearAndSelect);
+
+//    connect(dataTreeView->selectionModel(), &QItemSelectionModel::currentChanged,
+//            this, &MainWindow::treeItemSelectedChanged);
+}
 void MainWindow::DataSourceChanged(int index)
 {
     QVariant item = cmbDataSource->itemData(index);
@@ -376,6 +413,11 @@ void MainWindow::DataSourceFromFileOpened()
         QVector<QVector<qreal> > dataTable;
         ReadData(dirPath,dataTable,0.025);
         InsertChartIntoChartArea(dataTable,tr("传感器信号"),QString("#99cc66"));
+        //加一个测试信号到treeview
+        SignalItem * item = new SignalItem(dataTable,tr("信号"),this);
+        insertChild(item);
+        //treeModel->insertData(dataTable,tr("信号1"));
+
     }else{
 
     }
@@ -386,8 +428,10 @@ void MainWindow::Decomposed()
     QVariant item = cmbDecompose->currentData();
     if(item == Decompose::EMD){
 
-        std::vector<double> os = dataTableModel->OriginalSignal();
-
+        QModelIndex index = dataTreeView->selectionModel()->currentIndex();
+        TreeItem * item = static_cast<TreeItem*>(index.internalPointer());
+        std::vector<double> os = dynamic_cast<SignalItem*>(item->data(0).value<AbstractTreeItemType*>())->getData();
+        //也就c++能写出这么恶心的代码了
         QVector<QVector<qreal> > dataTable;
         dataTable.resize(2);
         double x = 0.0;
@@ -397,21 +441,41 @@ void MainWindow::Decomposed()
             X.push_back(x);
             x+=0.025f;
         }
+
         std::vector<std::vector<double> > res;
         emd(os,X,res);
         assert(res.size() != 0);
         dataTable[1].resize(static_cast<int>(res[0].size()));
 
+        index = dataTreeView->selectionModel()->currentIndex();
+        qDebug()<<tr("r:%1 c:%2").arg(index.row()).arg(index.column());
+        qDebug()<<index.isValid();
+        if(index.isValid() == false)qDebug()<<"false\n";
         for(int i=0;i<res.size();i++){
             for(int j=0;j<res[i].size();j++){
                 dataTable[1][j] = res[i][j];
             }
-            InsertChartIntoChartArea(dataTable,tr("IMF%1").arg(i+1),colorSet[i%6],true);
+            //InsertChartIntoChartArea(dataTable,tr("IMF%1").arg(i+1),colorSet[i%6],true);
+            SignalItem * item = new SignalItem(dataTable,tr("IMF%1").arg(i+1),this);
+            insertChild(item,index);
         }
 
     }else{
 
     }
+}
+
+void MainWindow::treeItemSelectedChanged()
+{
+    statusBar()->showMessage(tr("index has been selected"));
+    QModelIndex selectIndex = dataTreeView->selectionModel()->currentIndex();
+    qDebug()<<static_cast<TreeItem*>(selectIndex.internalPointer())->getLevel();
+    for(int i=0;i<chartLayout->count();i++){
+        chartLayout->removeItem(chartLayout->itemAt(i));
+    }
+    TreeItem *item = static_cast<TreeItem*>(selectIndex.internalPointer());
+    QWidget * widget = dynamic_cast<SignalItem *>((item->data(0).value<AbstractTreeItemType *>()))->getChartView();
+    chartLayout->addWidget(widget,0,0);
 }
 
 MainWindow::~MainWindow()
@@ -422,6 +486,22 @@ MainWindow::~MainWindow()
 void MainWindow::CreateDataTreeView()
 {
     dataTreeView = new QTreeView(this);
+//    QStringList headers;
+//    headers << tr("Title") << tr("Description");
+
+//    QFile file(":/default.txt");
+//    file.open(QIODevice::ReadOnly);
+//    if(file.isOpen() == true)qDebug()<<"ok\n";
+//    else qDebug()<<"error\n";
+    QStringList headers;
+    headers<<tr("信号")<<tr("详细信息");
+    treeModel = new TreeModel(headers,QString());
+//    file.close();
+    dataTreeView->setModel(treeModel);
+    for (int column = 0; column < treeModel->columnCount(); ++column)
+        dataTreeView->resizeColumnToContents(column);
+    connect(dataTreeView->selectionModel(), &QItemSelectionModel::currentChanged,
+            this, &MainWindow::treeItemSelectedChanged);
 }
 
 

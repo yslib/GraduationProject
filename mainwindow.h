@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 //#include <QAbstractTableModel>
+#include <QModelIndex>
 
 #ifndef _MSC_VER
 
@@ -42,6 +43,8 @@ class QTableView;
 class QRect;
 class QProgressBar;
 class QTreeView;
+class TreeModel;
+class AbstractTreeItemType;
 
 template<typename T> class QVector;
 
@@ -91,6 +94,7 @@ private:
     QWidget * centralWidget;
     QGridLayout *mainLayout;
     QTreeView * dataTreeView;
+    TreeModel * treeModel;
 
     QScrollArea *chartScrollArea;
     QGridLayout *chartLayout;
@@ -176,10 +180,14 @@ private:
     void ReadData(const QString &path, QVector<QVector<qreal> > & dataTable,qreal delta);
     void SetPieChartValue(int index, qreal val,const QString & label = QString());
 
+    void insertChild(AbstractTreeItemType * itemType,QModelIndex parent = QModelIndex());
+
+    void updateActions();
 private slots:
     void DataSourceChanged(int index);
     void DataSourceFromFileOpened();
     void Decomposed();
+    void treeItemSelectedChanged();
 };
 
 //PROTOTYPE
